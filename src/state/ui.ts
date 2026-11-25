@@ -1,4 +1,5 @@
-import { apiSettings, onSettingsReady } from '@/api/settings';
+import { importLocalPrefs } from './legacyPrefs';
+import { apiSettings } from '@/api/settings';
 import { reactive, ref, watch } from 'vue';
 
 /**
@@ -74,7 +75,8 @@ function validOrbShape(s: string): OrbShape {
 
 // activePage(上次停在哪一页)是纯本机临时导航态,跨设备同步无意义、且翻页即回写服务器太频繁,
 // 故仍存本机 localStorage;主题/导航位置是真·设置,改存进 apiSettings.ui(→ ST 跨设备同步)。
-const PAGE_STORAGE_KEY = 'bbs.ui.page.v1';
+importLocalPrefs();
+const PAGE_STORAGE_KEY = 'rabbit-book.ui.page.v1';
 
 function loadActivePage(): string {
   try {
@@ -110,7 +112,7 @@ export const ui = reactive<UiState>({
 });
 
 // settings 跨设备同步值就绪后,把主题/导航回灌进 ui(覆盖 import 阶段的默认)
-onSettingsReady(() => {
+watch(() => apiSettings.ui, () => {
   ui.theme = validTheme(apiSettings.ui.theme);
   ui.navPosition = validNav(apiSettings.ui.navPosition);
   ui.navTapClose = apiSettings.ui.navTapClose;
@@ -122,7 +124,7 @@ onSettingsReady(() => {
   ui.orbShape = validOrbShape(apiSettings.ui.orbShape);
   ui.orbOpacity = apiSettings.ui.orbOpacity;
   ui.orbSize = apiSettings.ui.orbSize;
-});
+}, { immediate: true });
 
 // ui 改变 → 写回 apiSettings.ui(由 settings 的 watch 防抖落盘、跨设备同步);activePage 仍存本机。
 watch(

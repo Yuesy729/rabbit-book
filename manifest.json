@@ -3,10 +3,10 @@
   "loading_order": 100,
   "requires": [],
   "optional": [],
-  "js": "dist/index.js?ver=1.4.0",
+  "js": "dist/index.js?ver=1.4.1",
   "generate_interceptor": "rabbit_generateInterceptor",
   "author": "柏柏（原作） / Yuesy729（兔之书）",
-  "version": "1.4.0",
+  "version": "1.4.1",
   "homePage": "https://github.com/Yuesy729/rabbit-book",
   "auto_update": false,
   "minimum_client_version": "1.12.13"

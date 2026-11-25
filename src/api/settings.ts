@@ -1,3 +1,4 @@
+import { importLocalPrefs } from '@/state/legacyPrefs';
 import { getContext } from '@/st/context';
 import { normalizeTemplate, type VarTemplate } from '@/memory/types';
 import { reactive, watch } from 'vue';
@@ -844,6 +845,40 @@ function persist(): void {
   const exFingerprint = excludesFingerprint(apiSettings);
   if (exFingerprint !== sharedExcludesFingerprint) writeSharedExcludes();
   ctx.saveSettingsDebounced?.();
+}
+
+/** 手动导入在已用过兔之书后仍可运行。来源只读，所有嵌套值都独立复制。 */
+export function importBaiBaiSettings(): boolean {
+  const ext = getContext()?.extensionSettings;
+  if (!ext) throw new Error('酒馆设置尚未加载');
+  hydrateSettings();
+  let source = ext.baibai_book as Partial<ApiSettings> | undefined;
+  if (!source) {
+    const raw = globalThis.localStorage?.getItem(LEGACY_STORAGE_KEY);
+    if (raw) {
+      try { source = JSON.parse(raw); } catch { throw new Error('柏宝书的本机设置格式损坏'); }
+    }
+  }
+  const shared = readSharedChannels(ext.baibai_api_channels);
+  const excludes = readSharedExcludes(ext.baibai_exclude_settings);
+  const hasOldUi = !!globalThis.localStorage?.getItem(LEGACY_UI_STORAGE_KEY);
+  const localPrefs = importLocalPrefs(true);
+  if (!source && !shared && !excludes && !hasOldUi && !localPrefs) return false;
+  const data = normalize(JSON.parse(JSON.stringify({ ...apiSettings, ...source })));
+  if (!source?.ui) migrateLegacyUiPrefs(data);
+  const channels = new Map(apiSettings.channels.map(channel => [channel.id, channel]));
+  for (const channel of [...(source?.channels ?? []), ...(shared?.channels ?? [])]) {
+    channels.set(channel.id, normalizeChannel(channel));
+  }
+  data.channels = Array.from(channels.values());
+  if (excludes && (excludesHasUserData(excludes) || !excludesHasUserData(data))) {
+    for (const key of ['excludedChars', 'excludedWorldNames', 'excludedWorldInfoPatterns', 'customStripTags'] as const) {
+      data[key] = excludes[key];
+    }
+  }
+  applyInto(apiSettings, data);
+  persist();
+  return true;
 }
 
 /**

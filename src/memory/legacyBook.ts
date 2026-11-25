@@ -1,10 +1,10 @@
 import type { STMessage } from '@/st/context';
 
-const fields = ['leaf', 'group', 'hidden', 'omit', 'internal_notice'] as const;
+export const legacyExtraFields = ['leaf', 'group', 'hidden', 'omit', 'internal_notice'] as const;
 
 function copyExtra(extra?: Record<string, unknown>): boolean {
-  if (!extra || extra.rabbit_book_imported || !fields.some(f => 'bbs_' + f in extra)) return false;
-  for (const field of fields) {
+  if (!extra || extra.rabbit_book_imported || !legacyExtraFields.some(f => 'bbs_' + f in extra)) return false;
+  for (const field of legacyExtraFields) {
     const source = 'bbs_' + field;
     const target = 'rabbit_' + field;
     if (extra[source] !== undefined && !(target in extra)) {

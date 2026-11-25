@@ -23,6 +23,7 @@ import { resetVectorStoreProbe, vectorBackendKind } from '@/memory/vector/store'
 import { checkForUpdate, performUpdate, updateState } from '@/memory/update';
 import { recallDebug } from '@/memory/vector/debug';
 import { computeCarryoverPlan, createNewChatWithCarryover, type CarryoverPlan } from '@/memory/carryover';
+import { importAllBaiBai, importStatus } from '@/memory/importBook';
 import { computeMigrationPlan, runHoraeMigration, type MigrationPlan } from '@/memory/migrate';
 import { ui, THEMES, ORB_SHAPES, type NavPosition } from '@/state/ui';
 import { uploadOrbImage } from '@/st/upload';
@@ -777,6 +778,21 @@ function exportPublicApiDocument() {
 
     <div class="bbs-sections">
       <!-- 基本设置 -->
+      <Collapsible title="柏宝书数据导入" :open="false">
+        <p class="bbs-field-hint">一次复制全部角色单聊和群聊的摘要、总结及其他记忆，并导入柏宝书设置，包括副 API 密钥、模型、提示词和向量配置。同名设置以柏宝书为准，兔之书独有的副 API 渠道会保留。</p>
+        <button class="bbs-btn bbs-btn-sm bbs-btn-primary" type="button" :disabled="importStatus.busy" @click="importAllBaiBai">
+          {{ importStatus.busy ? '导入中…' : '从柏宝书导入全部数据' }}
+        </button>
+        <div v-if="importStatus.message" role="status" class="bbs-field-hint">
+          {{ importStatus.settings }} {{ importStatus.message }}
+          <div>已检查 {{ importStatus.done }} / {{ importStatus.total }} 个聊天，新增副本 {{ importStatus.copied }}，已有副本 {{ importStatus.existing }}，无旧数据 {{ importStatus.empty }}。</div>
+        </div>
+        <details v-if="importStatus.errors.length" class="bbs-field-hint">
+          <summary>查看 {{ importStatus.errors.length }} 项问题</summary>
+          <div v-for="(error, i) in importStatus.errors" :key="i">{{ error }}</div>
+        </details>
+      </Collapsible>
+
       <Collapsible title="基本设置" :open="false">
         <div class="bbs-field">
           <div class="bbs-field-head">

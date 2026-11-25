@@ -3,7 +3,10 @@ import { bindEngine, handleGenerationIntercept } from '@/memory/engine';
 import { runVectorRecall, shouldRecallForType } from '@/memory/vector/recall';
 import { refreshInjection } from '@/memory/inject';
 import { syncTimeTagRegex } from '@/memory/timeTag';
-import { bindChatLifecycle } from '@/memory/store';
+import { loadArchivedMemory } from '@/memory/bookArchive';
+import { getContext } from '@/st/context';
+import { toast } from '@/st/toast';
+import { bindChatLifecycle, loadMemory } from '@/memory/store';
 import { checkForUpdate } from '@/memory/update';
 import App from '@/App.vue';
 import { vAutosize } from '@/directives/autosize';
@@ -21,6 +24,12 @@ import '@/styles/base.css';
 import '@/styles/theme.css';
 import { createApp } from 'vue';
 
+function restoreBookMemory() {
+  return loadArchivedMemory(() => { loadMemory(); refreshInjection(); }).catch(() => {
+    toast('兔之书的聊天记忆副本读取或保存失败，请重新打开当前聊天重试。', 'error');
+  });
+}
+
 const HOST_ID = 'bbs-app-host';
 
 /**
@@ -36,6 +45,7 @@ const HOST_ID = 'bbs-app-host';
 ): Promise<void> => {
   try {
     // 先走积压拦截:返回 true = 已 abort 本次生成,无需召回(生成不会发生)。
+    await restoreBookMemory();
     const intercepted = await handleGenerationIntercept(type, abort);
     // 放行且该类型需要召回 → 阻塞式向量召回(写注入槽后再放行生成)。
     // 召回内部自带向量开关/可用性判断,失败静默降级,绝不影响生成。
@@ -133,6 +143,9 @@ function bindMemoryWhenReady(attempt = 0) {
       // 设置先 hydrate:从 extension_settings 载入(或从旧 localStorage 迁移),之后才跨设备同步
       hydrateSettings();
       bindChatLifecycle();
+      const ctx = getContext();
+      if (ctx?.eventTypes && ctx.eventSource) ctx.eventSource.on(ctx.eventTypes.CHAT_CHANGED, restoreBookMemory);
+      void restoreBookMemory();
       // 公共读取接口不依赖记忆引擎开关；聊天载入后立即暴露，供其它插件/脚本读取。
       void registerPublicInterface();
       bindEngine();
